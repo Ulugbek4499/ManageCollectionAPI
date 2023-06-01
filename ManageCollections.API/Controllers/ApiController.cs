@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ManageCollections.API.Controllers
 {
+
+    [Route("api/[controller]")]
+    [ApiController]
     public abstract class ApiController<TModel> : ControllerBase
     {
         protected IMapper _mapper => HttpContext.RequestServices.GetRequiredService<IMapper>();

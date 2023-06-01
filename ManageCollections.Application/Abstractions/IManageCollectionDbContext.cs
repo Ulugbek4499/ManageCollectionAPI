@@ -1,4 +1,5 @@
-﻿using ManageCollections.Domain.Entities;
+﻿using ManageCollections.Application.Models.Token;
+using ManageCollections.Domain.Entities;
 using ManageCollections.Domain.Entities.IdentityEntities;
 using Microsoft.EntityFrameworkCore;
 

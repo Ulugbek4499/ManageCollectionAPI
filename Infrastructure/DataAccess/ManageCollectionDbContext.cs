@@ -1,5 +1,6 @@
 ﻿using Infrastructure.DataAccess.Interceptor;
 using ManageCollections.Application.Abstractions;
+using ManageCollections.Application.Models.Token;
 using ManageCollections.Domain.Entities;
 using ManageCollections.Domain.Entities.IdentityEntities;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,13 @@ namespace Infrastructure.DataAccess
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.AddInterceptors(_interceptor);
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Role>().Navigation(x => x.Permissions).AutoInclude();
+            modelBuilder.Entity<User>().Navigation(x => x.Roles).AutoInclude();
+            base.OnModelCreating(modelBuilder);
         }
     }
 

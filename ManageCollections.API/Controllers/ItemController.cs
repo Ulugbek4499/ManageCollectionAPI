@@ -1,4 +1,5 @@
-﻿using ManageCollections.Application.DTOs.Items;
+﻿using ManageCollections.API.Filters;
+using ManageCollections.Application.DTOs.Items;
 using ManageCollections.Application.Interfaces;
 using ManageCollections.Application.Models.ResponseModels;
 using ManageCollections.Domain.Entities;

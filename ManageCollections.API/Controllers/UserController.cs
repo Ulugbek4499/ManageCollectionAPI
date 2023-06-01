@@ -1,9 +1,14 @@
-﻿using ManageCollections.Application.DTOs.Users;
+﻿using Infrastructure;
+using Infrastructure.Services;
+using ManageCollections.Application.DTOs.Users;
 using ManageCollections.Application.Interfaces;
 using ManageCollections.Application.Models.ResponseModels;
+using ManageCollections.Application.Models.Token;
 using ManageCollections.Domain.Entities;
 using ManageCollections.Domain.Entities.IdentityEntities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace ManageCollections.API.Controllers
 {
@@ -13,11 +18,65 @@ namespace ManageCollections.API.Controllers
     {
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
+        private readonly ITokenService _tokenService;
 
-        public UserController(IUserRepository userRepository, IRoleRepository roleRepository)
+        public UserController(IUserRepository userRepository, IRoleRepository roleRepository, ITokenService tokenService)
         {
             _userRepository = userRepository;
             _roleRepository = roleRepository;
+            _tokenService = tokenService;
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [Route("Login")]
+        public async Task<IActionResult> Login([FromBody] UserCredentials credential)
+        {
+            string HashPassword = credential.Password.ComputeSha256Hash();
+
+            IEnumerable<User> users = await _userRepository.GetAsync(x => true, nameof(Domain.Entities.User.Roles));
+            User? user = users.FirstOrDefault(x => x.UserName == credential.Username /*&&
+                                                             x.Password == HashPassword*/);
+
+            Log.Warning("This is Warning");
+
+            if (user is null)
+            {
+                return NotFound("Not found Objects");
+            }
+            Tokens token = await _tokenService.CreateTokensAsync(user);
+
+            return Ok(token);
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [Route("Refresh")]
+        public async Task<IActionResult> Refresh([FromBody] Tokens tokens)
+        {
+            var principal = _tokenService.GetClaimsFromExpiredToken(tokens.AccessToken);
+            string? username = principal.Identity?.Name;
+            if (username == null)
+            {
+                return NotFound("Refresh token not found!");
+            }
+            var savedRefreshToken = _tokenService.Get(x => x.UserName == username &&
+                                                      x.RefreshToken == tokens.RefreshToken)
+                                                     .FirstOrDefault();
+
+            if (savedRefreshToken == null)
+            {
+                return BadRequest("Refresh token or Access token invalid!");
+            }
+            if (savedRefreshToken.ExpirationDate < DateTime.UtcNow)
+            {
+                _tokenService.Delete(savedRefreshToken);
+                return StatusCode(405, "Refresh token already expired");
+            }
+            Tokens newTokens = await _tokenService.CreateTokensFromRefresh(principal, savedRefreshToken);
+
+            return Ok(newTokens);
+
         }
 
         [HttpPost]
